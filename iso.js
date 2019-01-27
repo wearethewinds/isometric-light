@@ -86,7 +86,6 @@ class Tower {
         while (bY <= transformedY + this.length || bX <= transformedX) {
             let yOffset = 2 * (bY - (transformedY + .5 * this.length));
             for (let bHeight = this.height + yOffset; bHeight >= 0; --bHeight) {
-                shadowMap[`${Math.floor(bX)}:${Math.floor(bY - bHeight)}`] = true;
                 ctx.fillRect(bX, bY - bHeight, 1, 1);
 
             }
@@ -101,7 +100,6 @@ class Tower {
         while (bY >= transformedY + .5 * this.length || bX <= transformedX + .5 * this.width) {
             let yOffset = 2 * (bY - (transformedY + .5 * this.length));
             for (let bHeight = this.height + yOffset; bHeight >= 0; --bHeight) {
-                shadowMap[`${Math.floor(bX)}:${Math.floor(bY - bHeight)}`] = true;
                 ctx.fillRect(bX, bY - bHeight, 1, 1);
 
             }
@@ -279,8 +277,6 @@ for (let x = 0; x < MAP_LENGTH; ++x) {
 
 const keyMap = {};
 
-let shadowMap = {};
-
 const keyCodes = {
     W: 87,
     A: 65,
@@ -383,10 +379,6 @@ const isKeyPressed = (keyCode) => {
     return !!keyMap[keyCode];
 };
 
-const isActiveTile = (playerX, playerY, tileX, tileY) => {
-    return (playerX >= tileX && playerX < tileX + 1 && playerY >= tileY && playerY < tileY + 1);
-};
-
 const draw = function () {
 
     now2              = Date.now();
@@ -418,44 +410,9 @@ const draw = function () {
         setPlayer(x, y);
     }
 
-    /*const transformToScreenView = (x, y) => {
-        const sX = (mX * (TILE_LENGTH / 2)) - (mY * TILE_HEIGHT) + xOffset;
-        const sY = ((mX * (TILE_leNGTH / 2)) + (xmY * TILE_HEIGHT) / 2) + yOffset;
-
-
-
-        return [
-            ((x -)
-        ]
-    };*/
-
-    /*for (let y = 0; y < MAP_HEIGHT; ++y) {
-        for (let x = 0; x < MAP_LENGTH; ++x) {
-            if (getMapItem(x, y) === 'X') {
-
-                const newX = x * (TILE_LENGTH / 2);
-                const newY = y * TILE_HEIGHT;
-
-                const transformedTileX = newX - newY + xOffset;
-                const transformedTileY = ((newX + newY) / 2) + yOffset;
-
-                ctx.beginPath();
-
-                ctx.strokeStyle = '#FFFFFF';
-
-                ctx.moveTo(transformedX, transformedY);
-                ctx.lineTo(transformedTileX, transformedTileY);
-
-                ctx.stroke();
-
-                ctx.fillText(`(${toDegree(Math.atan2(y - playerPositionY, x - playerPositionX))})`, transformedTileX, transformedTileY);
-            }
-        }
-    }*/
-
     ctx.beginPath();
 
-    AssetManager.obj.forEach(obj => {
+    AssetManager.obj.filter(obj => obj instanceof Ground).forEach(obj => {
         obj.tick && obj.tick(obj, elapsedTime);
         obj.render(ctx);
     });
@@ -470,15 +427,14 @@ const draw = function () {
     const transformedX = newX - newY + xOffset;
     const transformedY = ((newX + newY) / 2) + yOffset;
 
-    ctx.moveTo(transformedX, transformedY);
+    /*ctx.moveTo(transformedX, transformedY);
     ctx.lineTo(transformedX + (.5 * PLAYER_WIDTH), transformedY + (.5 * PLAYER_HEIGHT));
     ctx.lineTo(transformedX, transformedY + PLAYER_HEIGHT);
     ctx.lineTo(transformedX - (.5 * PLAYER_WIDTH), transformedY + (.5 * PLAYER_HEIGHT));
-    ctx.lineTo(transformedX, transformedY);
+    ctx.lineTo(transformedX, transformedY);*/
 
     ctx.fill();
 
-    ctx.beginPath();
 
     const LIGHT_DISTANCE = 150;
     const LIGHT_ANGLE    = 90;
@@ -486,13 +442,8 @@ const draw = function () {
         let rayStart = 0;
 
         const rays       = [];
-        let rayWasHidden = false;
 
         for (let lDistance = 1; lDistance <= LIGHT_DISTANCE; lDistance += 1) {
-
-            const isHidden = function (screenPosX, screenPosY) {
-                return !!shadowMap[`${Math.floor(screenPosX)}:${Math.floor(screenPosY)}`];
-            };
 
             const screenX = transformedX - (lDistance * Math.cos(lAngle / 180 * Math.PI));
             const screenY = transformedY + (.5 * PLAYER_HEIGHT) + (lDistance * Math.sin(lAngle / 180 * Math.PI));
@@ -521,23 +472,11 @@ const draw = function () {
                 }
 
                 lightStopList.forEach(obj => {
-                    if (!rayWasHidden) {
                         ctx.fillStyle = 'rgba(135, 135, 0, .4)';
                         ctx.fillRect(screenX, screenY - obj.height, 1, obj.height);
-                    }
                 });
 
                 break;
-            }
-
-            if (isHidden(screenX, screenY)) {
-                rayWasHidden = true;
-                if (rayStart + 5 < lDistance) {
-                    rays.push([rayStart, lDistance]);
-                }
-                rayStart = lDistance + 1;
-
-                continue;
             }
 
 
@@ -570,9 +509,11 @@ const draw = function () {
         ctx.stroke();
     }
 
-    ctx.fill();
+    AssetManager.obj.filter(obj => !(obj instanceof Ground)).forEach(obj => {
+        obj.tick && obj.tick(obj, elapsedTime);
+        obj.render(ctx);
+    });
 
-    shadowMap = {};
 
     requestAnimationFrame(draw);
 };
